@@ -1,0 +1,6 @@
+[submodule "third_party/LoFTR"]
+	path = third_party/LoFTR
+	url = https://github.com/angshine/LoFTR.git
+[submodule "third_party/Hierarchical-Localization"]
+	path = third_party/Hierarchical-Localization
+	url = https://github.com/cvg/Hierarchical-Localization.git
