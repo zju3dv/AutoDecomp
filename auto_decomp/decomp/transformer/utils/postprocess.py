@@ -202,8 +202,15 @@ def segment_fg_supporting_plane(
         & (min_n_pts_both_sides <= max_n_underground_points)
     )
     if not _kept_mask.any():
-        logger.warning("No valid plane detected!")
-        return None
+        # if no plane is detected at all, keep one plane at least
+        logger.warning("No valid plane detected! Try keeping the plane with maximum number of points.")
+        if len(plane_inds) > 0:
+            plane = planes[0]
+            plane = Plane(params=plane.params, indices=bg_pts_ori_inds[plane.indices])
+            return plane
+        else:
+            # return None
+            raise RuntimeError("No valid plane detected!")
     plane_ind = int(plane_inds[_kept_mask][0])
     plane = planes[plane_ind]
     plane = Plane(params=plane.params, indices=bg_pts_ori_inds[plane.indices])
@@ -543,7 +550,7 @@ class Postprocess:
                 extend_bottom=self.cfg.extend_bbox_bottom_plane,
             )
             all_fg_aabb_min_max.append(aabb_min_max)
-            planes_obj.append(plane_obj)
+            planes_obj.append(plane_obj)  # object-centric plane
         all_fg_aabb_verts = min_max_to_vertices_torch(torch.stack(all_fg_aabb_min_max, 0))  # (B, 8, 3)
         return all_fg_aabb_min_max, all_fg_aabb_verts, planes_obj
 
@@ -634,7 +641,6 @@ class Postprocess:
             )  # (n_plane_pts, )
         else:
             udf_plane_to_fg = bg_pts.new_zeros((0,))
-
         decomp_results.update(
             {
                 "T44_w2o": T44_w2o,  # (4, 4), normalized-world => ground-aligned object-centric frame

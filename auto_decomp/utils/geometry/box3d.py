@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import Literal, Tuple, Union
 
 import numpy as np
 import open3d as o3d
@@ -140,12 +140,15 @@ def extend_aabb(
     ground_dir: np.ndarray = np.array([0.0, 1.0, 0.0]),
     ratio: float = 0.05,
     extend_bottom: bool = False,
+    extend_reference: Literal["before", "after"] = "after",
 ) -> AxisAlignedBoundingBox:
     """Extend the bottom side of an aabb to the ground_plane, and enlarge
     spatial extents of other sides. (assume world up-direction equals to the ground_plane normal.)
 
     Args:
         extend_bottom (bool): if True, extend the bottom side (near to ground) of the aabb as well
+        extend_renference: when computing the enlargement of the aabb, whether use the aabb before
+            or after it is aligned with the ground_plane
     """
     normal = np.array(ground_plane.params[:3])
     normal = normal / np.linalg.norm(normal, ord=2)
@@ -172,7 +175,12 @@ def extend_aabb(
     bottom_point = side_points[choice] + direction * np.abs(signed_dists[choice])
     up_point = side_points[1 - choice]
 
-    # TODO: compute the enlargement in ground direction after or before expanding the bbox? (currently before)
+    # for some corner cases, we only got partial segmentation, then use "after" is more appropriate
+    if extend_reference == "after":
+        enlargement[1] = (ratio * np.abs(up_point - bottom_point) / 2)[1]
+    else:
+        assert extend_reference == "before"
+    
     up_point = up_point + normalize(up_point - bottom_point, axis=-1) * enlargement  # only enlarge the upper plane
     if extend_bottom:
         bottom_point = bottom_point + normalize(bottom_point - up_point, axis=-1) * enlargement
@@ -180,7 +188,6 @@ def extend_aabb(
 
     _half_extent = np.abs(up_point - bottom_point) / 2
     half_extent = half_extent + (1 - ground_dir) * enlargement
-
     half_extent = np.where(np.isclose(_half_extent, np.zeros_like(_half_extent)), half_extent, _half_extent)
     min_bound, max_bound = center - half_extent, center + half_extent
 

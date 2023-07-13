@@ -112,23 +112,17 @@ class SaveResults:
             translation_oo2on: old object-centric frame -> new object-centric frame
                 # NOTE: not a euclidean transformation
         """
-        # T44_w2o: world -> object-centric world
         object_center = (aabb_min_max[1] + aabb_min_max[0]) / 2
         object_extent = aabb_min_max[1] - aabb_min_max[0]
 
-        # T44_oo2on: move world origin to object center & rescale object bbox (old obj-centric -> new obj-centric)
-        # T44_oo2on = np.eye(4)  # o0 => o1
-        # T44_oo2on[:3, -1] = -object_center
-        translation_oo2on = -object_center
         if self.cfg.bbox_normalize_mode == "diag":
             aabb_diag_len = np.linalg.norm(object_extent)
             scale_oo2on = self.cfg.bbox_diag_len / aabb_diag_len  # type: ignore
         else:
             assert self.cfg.bbox_normalize_mode == "side"
             scale_oo2on = self.cfg.bbox_side_len / np.max(object_extent)
+        translation_oo2on = -object_center * scale_oo2on
 
-        # NOTE: build separate transformation & scale matrix.
-        # T44_oo2on[:3, :] *= scale_oo2on
         return translation_oo2on, scale_oo2on
 
     def _build_object_anno(
@@ -183,7 +177,7 @@ class SaveResults:
         T44_w2wn[:3, :3] *= 2 * normalize_scale
         T44_w2wn[:3, -1] = -(2 * normalize_scale * normalize_min + 1)
         T44_oo2on[:3, -1] = translation_oo2on
-        T44_oo2on[:3, :] *= scale_oo2on
+        T44_oo2on[:3, :3] *= scale_oo2on
         T44_w2on = T44_oo2on @ T44_wn2oo @ T44_w2wn  # NOTE: not euclidean matrices
         T44_on2w = np.linalg.inv(T44_w2on)
 

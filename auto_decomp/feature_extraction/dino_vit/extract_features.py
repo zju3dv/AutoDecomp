@@ -130,7 +130,7 @@ def extract_single(args, inst_rel_dir):
 
     _extracted = (
         output_path.exists()
-        and n_images == len(list(output_path.iterdir()))
+        and n_images <= len(list(output_path.iterdir()))
         and set(image_names).issubset(set([p.stem for p in output_path.iterdir()]))
     )
 
